@@ -17,15 +17,12 @@ ELISA图像处理系统是一个基于深度学习的图像分割工具，专门
 
 ## 界面预览
 
-![系统主界面](D:\aGitHub\elisaSystem\mainwindow.png)
+![系统主界面](mainwindow.png)
 
 ## 系统要求
 
 - Windows 10/11 (24H2版本测试通过)
 - Python 3.8+
-- PyTorch
-- OpenCV
-- PySide6
 
 ## 安装指南
 
@@ -40,7 +37,16 @@ cd elisaSystem
 pip install -r requirements.txt
 ```
 
-3. 下载预训练模型权重文件并放置在`weight`目录下
+3. 下载预训练模型权重文件并放置在`weight`目录下（详见"模型权重文件"部分）
+
+## 模型权重文件
+
+由于模型权重文件较大，未包含在Git仓库中。请从以下链接下载所需权重文件并放置在`weight`目录下：
+
+- [UNet权重文件](https://example.com/unet_weights.pth) (示例链接)
+- [Attention U-Net权重文件](https://example.com/attention_unet_weights.pth) (示例链接)
+
+或者，您可以自己训练模型来生成权重文件。
 
 ## 使用说明
 
@@ -70,7 +76,7 @@ elisaSystem/
 ├── model/                  # 模型定义文件
 │   ├── UNet.py            # U-Net模型实现
 │   └── attention_unet.py  # Attention U-Net模型实现
-├── weight/                 # 预训练模型权重文件
+├── weight/                 # 预训练模型权重文件（需手动下载）
 ├── ElisaSystem_main.py     # 主程序入口
 ├── inferThread.py          # 推理线程处理
 ├── postProcess.py          # 后处理功能
