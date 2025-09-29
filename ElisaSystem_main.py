@@ -122,10 +122,16 @@ class MainWindow(QMainWindow):
         self.btn_ROI = self.ui.findChild(QPushButton, "pushButtonROI") #根据掩码区域裁切ROI
 
 
-        self.btn_selectUnet = self.ui.findChild(QAction, "actionUnet")#选择UNet动作
+        self.btn_selectUnet = self.ui.findChild(QAction, "actionUnet")#选择UNet
         self.btn_selectUnetWeight = self.ui.findChild(QAction, "actionUnet_weight")#选择Unet权重文件
-        self.btn_selectAttentionUnet = self.ui.findChild(QAction, "actionAttentionUnet")#选择AttentionUNet动作
+        self.btn_selectAttentionUnet = self.ui.findChild(QAction, "actionAttentionUnet")#选择AttentionUNet
         self.btn_selectAttentionUnetWeight = self.ui.findChild(QAction, "actionAttentionUnet_weight")#选择AttentionUnet权重文件
+        self.btn_selectR2Unet = self.ui.findChild(QAction, "actionR2Unet")#选择R2Unet
+        self.btn_selectR2UnetWeight = self.ui.findChild(QAction, "actionR2Unet_weight")#选择R2Unet权重文件
+        self.btn_selectSwinUnet = self.ui.findChild(QAction, "actionSwinUnet")#选择SwinUnet
+        self.btn_selectSwinUnetWeight = self.ui.findChild(QAction, "actionSwinUnet_weight")# 选择SwinUnet权重文件
+        self.btn_selectFCN8S = self.ui.findChild(QAction, "actionFCN8S")#选择FCN8S
+        self.btn_selectFCN8SWeight = self.ui.findChild(QAction, "actionFCN8S_weight")#选择FCN8S权重文件
 
         self.label_modelInfo = self.ui.findChild(QLabel, "labelModel")#模型信息显示区
         self.label_modelWeightInfo = self.ui.findChild(QLabel, "labelWeight")#模型权重信息显示区
@@ -170,6 +176,18 @@ class MainWindow(QMainWindow):
         self.btn_selectAttentionUnet.triggered.connect(self.select_attention_unet)
         #选择AttentionUnet权重文件
         self.btn_selectAttentionUnetWeight.triggered.connect(self.select_attention_unet_weight)
+        #选择R2Unet模型
+        self.btn_selectR2Unet.triggered.connect(self.select_r2_unet)
+        #选择R2Unet权重文件
+        self.btn_selectR2UnetWeight.triggered.connect(self.select_r2_unet_weight)
+        #选择SwinUnet模型
+        self.btn_selectSwinUnet.triggered.connect(self.select_swin_unet)
+        #选择SwinUnet权重文件
+        self.btn_selectSwinUnetWeight.triggered.connect(self.select_swin_unet_weight)
+        #选择FCN8S模型
+        self.btn_selectFCN8S.triggered.connect(self.select_fcn8s)
+        #选择FCN8S权重文件
+        self.btn_selectFCN8SWeight.triggered.connect(self.select_fcn8s_weight)
         #选择不同模型时更新标签
         self.model_changed.connect(self.update_model_info)
 
@@ -336,7 +354,58 @@ class MainWindow(QMainWindow):
     #选择AttentionUnet权重文件
     def select_attention_unet_weight(self):
         # 设置当前模型权重路径
-        file_path = 'weight/Attention_UNet_16_new_ElisaTemplateDataset256_100_best.pth'
+        file_path = 'weight/Attention_UNet_16_N_ElisaTemplateDataset256_150_seed42_best.pth'
+        if file_path:
+            self.current_model_path = file_path
+            self.model_changed.emit('',file_path)
+            self.add_log(f"选择模型权重文件：{file_path}")
+
+    # 选择模型R2Unet
+    def select_r2_unet(self):
+        # 设置当前模型路径/类型
+        self.current_model = "R2Unet"  # 或者 ModelType.R2_UNET.name
+        # 发出信号，更新标签
+        self.model_changed.emit("R2Unet",'')
+        # 日志记录
+        self.add_log(f"选择模型：{self.current_model}")
+    #选择R2Unet权重文件
+    def select_r2_unet_weight(self):
+        # 设置当前模型权重路径
+        file_path = 'weight/r2unet_16_N_ElisaTemplateDataset256_150_seed42_best.pth'
+        if file_path:
+            self.current_model_path = file_path
+            self.model_changed.emit('',file_path)
+            self.add_log(f"选择模型权重文件：{file_path}")
+
+    # 选择SwinUnet模型
+    def select_swin_unet(self):
+        # 设置当前模型路径/类型
+        self.current_model = "SwinUnet"  # 或者 ModelType.SWIN_UNET.name
+        # 发出信号，更新标签
+        self.model_changed.emit("SwinUnet",'')
+        # 日志记录
+        self.add_log(f"选择模型：{self.current_model}")
+    #选择SwinUnet权重文件
+    def select_swin_unet_weight(self):
+        # 设置当前模型权重路径
+        file_path = 'weight/SwinUNet_16_N_ElisaTemplateDataset256_150_seed42_best.pth'
+        if file_path:
+            self.current_model_path = file_path
+            self.model_changed.emit('',file_path)
+            self.add_log(f"选择模型权重文件：{file_path}")
+
+    # 选择FCN8S模型
+    def select_fcn8s(self):
+        # 设置当前模型路径/类型
+        self.current_model = "FCN8S"  # 或者 ModelType.FCN8S.name
+        # 发出信号，更新标签
+        self.model_changed.emit("FCN8S",'')
+        # 日志记录
+        self.add_log(f"选择模型：{self.current_model}")
+    #选择FCN8S权重文件
+    def select_fcn8s_weight(self):
+        # 设置当前模型权重路径
+        file_path = 'weight/fcn8s_16_N_ElisaTemplateDataset256_150_seed42_best.pth'
         if file_path:
             self.current_model_path = file_path
             self.model_changed.emit('',file_path)
