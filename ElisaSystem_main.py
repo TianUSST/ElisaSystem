@@ -4,6 +4,7 @@ from datetime import datetime
 
 import cv2
 import numpy as np
+import torch
 from PIL import Image
 from PIL.ImageQt import ImageQt
 from PySide6.QtGui import QPixmap, QAction, QTextCursor, QColor, QTextCharFormat, QImage, QIcon
@@ -14,6 +15,7 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtCore import QFile, Signal
 from PySide6.QtCore import Qt
 
+from classThread import ClassificationThread
 from inferThread import InferenceThread, BatchInferenceThread
 from overlay_mask_on_image import overlay_mask_on_image, numpy_to_qpixmap
 from postProcess import postprocess_mask
@@ -37,9 +39,6 @@ class MainWindow(QMainWindow):
         self.current_image_path = None #当前图片路径
         self.current_pixmap = None #当前图片QPixmap对象
         self.current_array = None #当前图片numpy数组
-        self.current_patches_on_image =[]
-        self.current_bboxes_on_image = []
-        self.current_mask_on_image_idx = None
 
         # 批量图片状态
         self.image_folder_path = None #图片文件夹路径
@@ -69,8 +68,14 @@ class MainWindow(QMainWindow):
         # 可视化状态
         self.current_overlaid = None #当前可视化结果QPixmap对象
 
+        # 分类任务相关
+        self.roi_result = []# 每个item示例: {"patch": np.ndarray, "bbox": (x,y,w,h), "class": None}
+        self.class_use_gpu = False# 分类是否使用GPU推理
+        self.class_confidence = 0.5# 分类置信度
+        self.classes_json = "classes.json"
 
-    #-----------------------------------初始化UI------------------------------------------------------
+
+        #-----------------------------------初始化UI------------------------------------------------------
     def load_ui(self):
         # 打开 UI 文件
         ui_file = QFile(r"D:\QTproject\elisa\form.ui")
@@ -104,6 +109,8 @@ class MainWindow(QMainWindow):
         self.progressBar_patch.setValue(0)  # 设置初始值
         self.progressBar_batch = self.ui.findChild(QProgressBar, "progressBarBatch")#进度条
         self.progressBar_batch.setValue(0)  # 设置初始值
+        self.progressBar_class = self.ui.findChild(QProgressBar, "progressBarClass")#进度条
+        self.progressBar_class.setValue(0)  # 设置初始值
 
         self.btn_openMutilImageFolder = self.ui.findChild(QPushButton, "pushButtonMutiImage")#打开多张图片按钮
         self.btn_Savepath = self.ui.findChild(QPushButton, "pushButtonSavepath")#保存路径按钮
@@ -120,6 +127,11 @@ class MainWindow(QMainWindow):
         self.spinBox_minArea.setValue(1500)#设置初始显示值
 
         self.btn_ROI = self.ui.findChild(QPushButton, "pushButtonROI") #根据掩码区域裁切ROI
+        self.btn_predict = self.ui.findChild(QPushButton, "pushButtonPositivePredict") #阳性检测按钮
+        self.spinBox_classConfidence = self.ui.findChild(QDoubleSpinBox, "doubleSpinBoxclassConfidience")#分类置信度阈值
+        self.spinBox_classConfidence.setValue(0.5)
+        self.radioButton_classUseGPU = self.ui.findChild(QRadioButton, "radioButtonClassUsingGPU")
+
 
 
         self.btn_selectUnet = self.ui.findChild(QAction, "actionUnet")#选择UNet
@@ -143,10 +155,14 @@ class MainWindow(QMainWindow):
         self.btn_openSingleImage.clicked.connect(self.open_image_dialog)
         # 勾选是否使用GPU推理
         self.radioButton_useGPU.toggled.connect(self.use_gpu_changed)
+        # 分类任务是否启用gpu
+        self.radioButton_classUseGPU.toggled.connect(self.class_use_gpu_changed)
         # 步长设置显示
         self.spinBox_stride.valueChanged.connect(self.stride_changed)
         # 置信度设置显示
         self.spinBox_confidence.valueChanged.connect(self.confidence_changed)
+        # 分类置信度设置
+        self.spinBox_classConfidence.valueChanged.connect(self.class_confidence_changed)
         # 圆形度阈值设置显示
         self.spinBox_circularity.valueChanged.connect(self.circularity_changed)
         # 面积阈值设置显示
@@ -166,6 +182,8 @@ class MainWindow(QMainWindow):
         self.checkBox_PostProcess.toggled.connect(self.update_checkbox_post_process_status)
         # 裁切ROI
         self.btn_ROI.clicked.connect(self.crop_ROI_base_on_mask)
+        # 阳性检测按钮
+        self.btn_predict.clicked.connect(self.start_positive_predict)
 
 
         #选择Unet模型
@@ -239,10 +257,19 @@ class MainWindow(QMainWindow):
     def use_gpu_changed(self,checked:bool):
         if checked:
             self.use_gpu = True
-            self.add_log("开启GPU推理")
+            self.add_log("开启GPU分割")
         else:
             self.use_gpu = False
-            self.add_log("关闭GPU推理")
+            self.add_log("关闭GPU分割")
+
+    # 检测gpu是否启用
+    def class_use_gpu_changed(self, checked: bool):
+        if checked:
+            self.class_use_gpu = True
+            self.add_log("开启GPU分类")
+        else:
+            self.class_use_gpu = False
+            self.add_log("关闭GPU分类")
 
 
     # 步长调整
@@ -253,7 +280,12 @@ class MainWindow(QMainWindow):
     # 置信度调整
     def confidence_changed(self,value:float):
         self.confidence = value
-        self.add_log(f"置信度调整为：{value:.2f}")
+        self.add_log(f"分割置信度调整为：{value:.2f}")
+
+    # 置信度调整
+    def class_confidence_changed(self, value: float):
+        self.class_confidence = value
+        self.add_log(f"分类任务置信度调整为：{value:.2f}")
 
     # 圆形度阈值调整
     def circularity_changed(self,value:float):
@@ -409,6 +441,7 @@ class MainWindow(QMainWindow):
         if file_path:
             self.current_model_path = file_path
             self.model_changed.emit('',file_path)
+
             self.add_log(f"选择模型权重文件：{file_path}")
 
     # 更新模型信息
@@ -684,7 +717,9 @@ class MainWindow(QMainWindow):
     # 处理cuda环境检查结果
     def handle_device_status(self,available:bool):
         if self.radioButton_useGPU.isChecked() and not available:
-            self.add_log("注意：CUDA不可用，将使用CPU推理")
+            self.add_log("注意：CUDA不可用，将使用CPU分割")
+        if self.radioButton_classUseGPU.isChecked() and not available:
+            self.add_log("注意：CUDA不可用，将使用CPU进行分类")
         # else:
         #     self.textBrowser.append(f"使用{'GPU' if available else 'CPU'}进行推理")
 
@@ -711,8 +746,86 @@ class MainWindow(QMainWindow):
         if self.current_mask is None:
             QMessageBox.warning(self, "警告", "当前不存在掩码文件，请先进行分割")
             return
-        self.current_patches_on_image,self.current_bboxes_on_image = preprocess_for_classification(self.current_mask,self.current_array,patch_size=224)
-        self.add_log(f"已裁切 {len(self.current_patches_on_image)} 个ROI区域")
+        roi_list = preprocess_for_classification(self.current_mask,self.current_array,patch_size=224)
+        # 裁切后初始化class分类字段为None
+        for item in roi_list:
+            item["class"] = None
+        # 保存成员变量，包含当前图片中裁切ROI的所有信息（分类除外））
+        self.roi_result = roi_list
+        #日志显示
+        self.add_log(f"裁切完成，共裁切 {len(roi_list)} 个ROI区域")
+        print(len(roi_list))
+        print(roi_list[0].keys())
+
+    # 阳性检测
+    def start_positive_predict(self):
+        """
+            对已裁切的ROI进行阳性/阴性分类，并更新roi_result
+        """
+        if not hasattr(self, "roi_result") or len(self.roi_result) == 0:
+            print("没有ROI可分类")
+            return
+        if hasattr(self, "classification_thread") and self.classification_thread.isRunning():
+            print("分类线程正在运行，请稍等...")
+            return
+        # 配置线程参数
+        model_path = "classify_weight/best.pth"
+        model = "resnet18"#先写死，后续可以更改
+        # 创建线程
+        self.single_classification_thread = ClassificationThread(
+            self.roi_result,
+            model_path,
+            self.classes_json,
+            model,
+            self.class_use_gpu,
+            224,
+            self.class_confidence,
+            parent=self
+        )
+        #绑定信号
+        self.single_classification_thread.cuda_available.connect(self.handle_device_status)  # cuda环境检查
+        self.single_classification_thread.finished.connect(self.on_single_classification_finished)
+        self.single_classification_thread.progress.connect(self.update_classification_progress)
+        #启动线程
+        self.single_classification_thread.start()
+
+    # 单张分类结果处理
+    def on_single_classification_finished(self):
+        """
+            分类完成后回调，更新显示或绘制阳性ROI
+            """
+        print("所有ROI分类完成")
+        # 拷贝原图+掩码
+        if self.current_overlaid is None:
+            QMessageBox.warning(self, "警告", "原图掩码叠加结果不存在")
+            return
+        overlaid_display = self.current_overlaid.copy()
+        # 遍历ROI字典列表，其中已经包含了分类结果
+        for idx, item in enumerate(self.roi_result):
+            print(f"ROI {idx}: 类别={item.get('class')}, 置信度={item.get('confidence', 0):.2f}")
+            x, y, w, h = item["bbox"]
+            # 阳性绘制红框
+            if item["class"] == "positive" and item.get("confidence", 0) >= self.class_confidence:
+                cv2.rectangle(overlaid_display, (x, y), (x + w, y + h), (0, 0, 255), 3)
+                cv2.putText(overlaid_display, f"{item['class']}:{item['confidence']:.2f}",
+                            (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 3)
+
+        # 显示
+        pixmap = numpy_to_qpixmap(overlaid_display)
+        self.graphicsView_in.scene().clear()
+        self.graphicsView_in.scene().addPixmap(pixmap)
+        self.graphicsView_in.fitInView(self.graphicsView_in.scene().itemsBoundingRect(), Qt.KeepAspectRatio)
+
+    # 分类进度更新
+    def update_classification_progress(self, index, total):
+        """
+            分类进度更新
+        """
+        self.progressBar_class.setValue(int(index / total * 100))
+
+
+
+
 
 
 if __name__ == "__main__":
