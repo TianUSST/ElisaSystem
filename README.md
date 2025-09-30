@@ -18,7 +18,7 @@ ELISA图像处理系统是一个基于深度学习的图像分割工具，专门
 
 ## 界面预览
 
-![系统主界面](D:\aGitHub\elisaSystem\mainwindow.png)
+![系统主界面](mainwindow.png)
 
 ## 系统要求
 
