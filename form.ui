@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>../../aGitHub/elisaSystem/icon.png</normaloff>../../aGitHub/elisaSystem/icon.png</iconset>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="widgetBottom" native="true">
     <property name="geometry">
@@ -30,8 +34,8 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>20</y>
-       <width>84</width>
+       <y>10</y>
+       <width>241</width>
        <height>16</height>
       </rect>
      </property>
@@ -45,10 +49,10 @@
     <widget class="QLabel" name="labelWeight">
      <property name="geometry">
       <rect>
-       <x>230</x>
-       <y>20</y>
-       <width>741</width>
-       <height>16</height>
+       <x>300</x>
+       <y>10</y>
+       <width>651</width>
+       <height>20</height>
       </rect>
      </property>
      <property name="styleSheet">
@@ -58,35 +62,87 @@
       <string>模型权重路径：</string>
      </property>
     </widget>
-    <widget class="QWidget" name="layoutWidget">
+    <widget class="QWidget" name="">
      <property name="geometry">
       <rect>
        <x>0</x>
-       <y>43</y>
+       <y>30</y>
        <width>1021</width>
-       <height>54</height>
+       <height>61</height>
       </rect>
      </property>
-     <layout class="QVBoxLayout" name="verticalLayout_progressBar">
+     <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <widget class="QProgressBar" name="progressBarPatch">
-        <property name="styleSheet">
-         <string notr="true">color: rgb(0, 0, 0);</string>
-        </property>
-        <property name="value">
-         <number>24</number>
-        </property>
-       </widget>
+       <layout class="QHBoxLayout" name="horizontalLayout_PatchProgress">
+        <item>
+         <widget class="QLabel" name="labelPatchProgress">
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 0);</string>
+          </property>
+          <property name="text">
+           <string>单张分割进度</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBarPatch">
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 0);</string>
+          </property>
+          <property name="value">
+           <number>24</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
-       <widget class="QProgressBar" name="progressBarBatch">
-        <property name="styleSheet">
-         <string notr="true">color: rgb(0, 0, 0);</string>
-        </property>
-        <property name="value">
-         <number>24</number>
-        </property>
-       </widget>
+       <layout class="QHBoxLayout" name="horizontalLayout_ClassProgress">
+        <item>
+         <widget class="QLabel" name="labelClassProgress">
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 0);</string>
+          </property>
+          <property name="text">
+           <string>单张分类进度</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBarClass">
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 0);</string>
+          </property>
+          <property name="value">
+           <number>24</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_BatchProgress">
+        <item>
+         <widget class="QLabel" name="labelBatchProgress">
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 0);</string>
+          </property>
+          <property name="text">
+           <string>批量检测进度</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBarBatch">
+          <property name="styleSheet">
+           <string notr="true">color: rgb(0, 0, 0);</string>
+          </property>
+          <property name="value">
+           <number>24</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </widget>
@@ -352,7 +408,7 @@ color: rgb(0, 0, 0);</string>
      </layout>
     </widget>
    </widget>
-   <widget class="QGroupBox" name="groupBox">
+   <widget class="QGroupBox" name="groupBoxBatch">
     <property name="geometry">
      <rect>
       <x>230</x>
@@ -391,7 +447,7 @@ color: rgb(0, 0, 0);</string>
       <item>
        <widget class="QPushButton" name="pushButtonStartBatch">
         <property name="text">
-         <string>开始批量检测</string>
+         <string>开始批量分割</string>
         </property>
        </widget>
       </item>
@@ -411,10 +467,10 @@ color: rgb(0, 0, 0);</string>
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>460</x>
+      <x>450</x>
       <y>0</y>
-      <width>561</width>
-      <height>681</height>
+      <width>571</width>
+      <height>691</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_WorkSpace">
@@ -434,6 +490,52 @@ color: rgb(0, 0, 0);</string>
      </item>
     </layout>
    </widget>
+   <widget class="QGroupBox" name="groupBoxClass">
+    <property name="geometry">
+     <rect>
+      <x>230</x>
+      <y>10</y>
+      <width>181</width>
+      <height>131</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>分类参数调节</string>
+    </property>
+    <widget class="QWidget" name="">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>161</width>
+       <height>101</height>
+      </rect>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_classConfidience">
+        <item>
+         <widget class="QLabel" name="labelClassConfidience">
+          <property name="text">
+           <string>置信度</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QDoubleSpinBox" name="doubleSpinBoxclassConfidience"/>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioButtonClassUsingGPU">
+        <property name="text">
+         <string>使用GPU</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -450,6 +552,9 @@ color: rgb(0, 0, 0);</string>
     </property>
     <addaction name="actionUnet"/>
     <addaction name="actionAttentionUnet"/>
+    <addaction name="actionR2Unet"/>
+    <addaction name="actionFCN8S"/>
+    <addaction name="actionSwinUnet"/>
    </widget>
    <widget class="QMenu" name="menu_2">
     <property name="title">
@@ -457,6 +562,9 @@ color: rgb(0, 0, 0);</string>
     </property>
     <addaction name="actionUnet_weight"/>
     <addaction name="actionAttentionUnet_weight"/>
+    <addaction name="actionR2Unet_weight"/>
+    <addaction name="actionFCN8S_weight"/>
+    <addaction name="actionSwinUnet_weight"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
@@ -479,6 +587,36 @@ color: rgb(0, 0, 0);</string>
   <action name="actionAttentionUnet_weight">
    <property name="text">
     <string>AttentionUnet</string>
+   </property>
+  </action>
+  <action name="actionR2Unet">
+   <property name="text">
+    <string>R2Unet</string>
+   </property>
+  </action>
+  <action name="actionFCN8S">
+   <property name="text">
+    <string>FCN8S</string>
+   </property>
+  </action>
+  <action name="actionSwinUnet">
+   <property name="text">
+    <string>SwinUnet</string>
+   </property>
+  </action>
+  <action name="actionR2Unet_weight">
+   <property name="text">
+    <string>R2Unet</string>
+   </property>
+  </action>
+  <action name="actionFCN8S_weight">
+   <property name="text">
+    <string>FCN8S</string>
+   </property>
+  </action>
+  <action name="actionSwinUnet_weight">
+   <property name="text">
+    <string>SwinUnet</string>
    </property>
   </action>
  </widget>
