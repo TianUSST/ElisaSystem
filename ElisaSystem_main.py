@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
         #-----------------------------------初始化UI------------------------------------------------------
     def load_ui(self):
         # 打开 UI 文件
-        ui_file = QFile(r"D:\QTproject\elisa\form.ui")
+        ui_file = QFile(r"form.ui")
         ui_file.open(QFile.ReadOnly)
         # 加载 UI
         loader = QUiLoader()

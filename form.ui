@@ -58,7 +58,7 @@
       <string>模型权重路径：</string>
      </property>
     </widget>
-    <widget class="QWidget" name="">
+    <widget class="QWidget" name="bottomProgressContainer">
      <property name="geometry">
       <rect>
        <x>0</x>
@@ -159,7 +159,7 @@ color: rgb(0, 0, 0);</string>
     <property name="title">
      <string>分割参数调节</string>
     </property>
-    <widget class="QWidget" name="layoutWidget">
+    <widget class="QWidget" name="layoutWidgetSegParam">
      <property name="geometry">
       <rect>
        <x>0</x>
@@ -246,7 +246,7 @@ color: rgb(0, 0, 0);</string>
     <property name="title">
      <string>批量输出控制</string>
     </property>
-    <widget class="QWidget" name="layoutWidget">
+    <widget class="QWidget" name="layoutWidgetBatchOutput">
      <property name="geometry">
       <rect>
        <x>0</x>
@@ -292,7 +292,7 @@ color: rgb(0, 0, 0);</string>
     <property name="title">
      <string>后处理参数调节</string>
     </property>
-    <widget class="QWidget" name="layoutWidget">
+    <widget class="QWidget" name="layoutWidgetPostProcess">
      <property name="geometry">
       <rect>
        <x>0</x>
@@ -356,7 +356,7 @@ color: rgb(0, 0, 0);</string>
     <property name="title">
      <string>单张图片操作</string>
     </property>
-    <widget class="QWidget" name="layoutWidget">
+    <widget class="QWidget" name="layoutWidgetSingle">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -416,7 +416,7 @@ color: rgb(0, 0, 0);</string>
     <property name="title">
      <string>批量操作</string>
     </property>
-    <widget class="QWidget" name="layoutWidget">
+    <widget class="QWidget" name="layoutWidgetBatch">
      <property name="geometry">
       <rect>
        <x>20</x>
@@ -460,7 +460,7 @@ color: rgb(0, 0, 0);</string>
      </rect>
     </property>
    </widget>
-   <widget class="QWidget" name="layoutWidget">
+   <widget class="QWidget" name="layoutWidgetWorkSpace">
     <property name="geometry">
      <rect>
       <x>450</x>
@@ -498,7 +498,7 @@ color: rgb(0, 0, 0);</string>
     <property name="title">
      <string>分类参数调节</string>
     </property>
-    <widget class="QWidget" name="">
+    <widget class="QWidget" name="classParamContainer">
      <property name="geometry">
       <rect>
        <x>10</x>
