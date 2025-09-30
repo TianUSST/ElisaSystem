@@ -13,10 +13,6 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
-  <property name="windowIcon">
-   <iconset>
-    <normaloff>../../aGitHub/elisaSystem/icon.png</normaloff>../../aGitHub/elisaSystem/icon.png</iconset>
-  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="widgetBottom" native="true">
     <property name="geometry">
