@@ -19,5 +19,13 @@ Pillow>=8.3.0
 # Symbolic mathematics library (used for switch function)
 sympy>=1.8
 
-# CSV file handling (built-in but listing for completeness)
-csv>=1.0
+# Machine learning library for classification models
+timm>=0.9.0
+
+# Data processing and visualization
+pandas>=1.3.0
+matplotlib>=3.4.0
+scikit-learn>=1.0.0
+
+# Progress bar for training
+tqdm>=4.62.0

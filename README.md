@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-ELISA图像处理系统是一个基于深度学习的图像分割工具，专门用于处理ELISA（酶联免疫吸附测定）实验中的图像，自动识别和分析微孔板中的目标区域。
+ELISA图像处理系统是一个基于深度学习的图像分割工具，专门用于处理ELISA（酶联免疫吸附测定）实验中的图像，自动识别和分析微孔板中的目标区域。另外，此项目可以方便的替换成你自己的模型，实现一个简易的图形化界面操作。
 
 ## 功能特点
 
@@ -42,10 +42,9 @@ pip install -r requirements.txt
 
 ## 模型权重文件
 
-由于模型权重文件较大，未包含在Git仓库中。请从以下链接下载所需权重文件并放置在`weight`目录下：
+由于模型权重文件较大，未包含在Git仓库中。可以从下链接下载所需权重文件：
 
-- [UNet权重文件](https://example.com/unet_weights.pth) (示例链接)
-- [Attention U-Net权重文件](https://example.com/attention_unet_weights.pth) (示例链接)
+- [权重文件](https://drive.google.com/drive/folders/1NYMwy9-X0avijlx6KCfrtiFa5VKHurr2?usp=drive_link)
 
 或者，您可以自己训练模型来生成权重文件。
 
@@ -160,9 +159,6 @@ elisaSystem/
 
 欢迎提交Issue和Pull Request来改进这个项目。
 
-## 许可证
-
-本项目采用MIT许可证，详情请见[LICENSE](LICENSE)文件。
 
 ## 联系方式
 
