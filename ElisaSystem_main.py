@@ -633,10 +633,7 @@ class MainWindow(QMainWindow):
     # 转换推理结果为QPixmap
     def convert_output_to_pixmap(self,array: np.ndarray) -> QPixmap:
         """
-        将 NumPy 数组转为 QPixmap，方便在 QGraphicsView 或 QLabel 显示
-        array: np.ndarray
-            - 2D 灰度图像或 3D 彩色图像 (H, W, 3)
-            - 数据类型最好是 uint8，值域 0~255
+        将 NumPy 数组转为 QPixmap，避免使用 ImageQt 以兼容 PySide6 QPixmap.fromImage
         """
         # 如果是浮点数，先归一化到 0~255
         if np.issubdtype(array.dtype, np.floating):
@@ -644,16 +641,8 @@ class MainWindow(QMainWindow):
         elif array.dtype != np.uint8:
             array = array.astype(np.uint8)
 
-        # 2D 灰度图转换为 3D RGB
-        if array.ndim == 2:
-            array = np.stack([array] * 3, axis=-1)
-
-        # 转 PIL Image
-        img = Image.fromarray(array)
-
-        # 转 QPixmap
-        qpixmap = QPixmap.fromImage(ImageQt(img))
-        return qpixmap
+        # 2D 灰度图保持灰度；3D 视为 BGR 或 RGB 均可由 numpy_to_qpixmap 处理
+        return numpy_to_qpixmap(array)
 
     # 处理推理结果
     def handle_inference_result(self,output,infer_time):

@@ -1,31 +1,11 @@
-# Core scientific computing libraries
-numpy>=1.21.0
-scipy>=1.7.0
-
-# Computer vision library
-opencv-python>=4.5.0
-opencv-contrib-python>=4.5.0
-
-# Deep learning framework
-torch>=1.9.0
-torchvision>=0.10.0
-
-# GUI framework
-PySide6>=6.0.0
-
-# Image processing library
-Pillow>=8.3.0
-
-# Symbolic mathematics library (used for switch function)
-sympy>=1.8
-
-# Machine learning library for classification models
-timm>=0.9.0
-
-# Data processing and visualization
-pandas>=1.3.0
-matplotlib>=3.4.0
-scikit-learn>=1.0.0
-
-# Progress bar for training
-tqdm>=4.62.0
+numpy
+opencv-python
+torch
+torchvision
+PySide6
+Pillow
+timm
+pandas
+matplotlib
+scikit-learn
+tqdm
