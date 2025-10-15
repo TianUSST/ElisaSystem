@@ -248,6 +248,8 @@ class BatchInferenceThread(QThread):
     cuda_available = Signal(bool)
     # 批次完成信号
     finished_batch = Signal()
+    # 开始推理信号，控制主线程按钮禁用
+    start_inference = Signal()
 
     def __init__(self, model, model_path, image_list, stride, thresh=0.5, cuda=False,save_path=None,save_bool=False,post_process=False,max_objects=96,min_area=1500,min_circularity=0.5):
         super().__init__()
@@ -291,7 +293,8 @@ class BatchInferenceThread(QThread):
 
         # 获取总长度
         total_images = len(self.image_list)
-
+        # 开始推理
+        self.start_inference.emit()
         # 逐个处理每个图像块
         for idx ,img_path in enumerate(self.image_list):
             binary_output, inference_time = process_large_image(self.model, img_path,
@@ -309,11 +312,11 @@ class BatchInferenceThread(QThread):
                 if self.post_process:
                     binary_output,_ = postprocess_mask(binary_output, 96,self.min_area,self.min_circularity)
                     os.makedirs(self.save_path, exist_ok=True)
-                    save_file = os.path.join(self.save_path, os.path.basename(img_path))
+                    save_file = os.path.join(self.save_path, f"seg_{os.path.basename(img_path)}")
                     Image.fromarray(binary_output).save(save_file)
                 else:
                     os.makedirs(self.save_path, exist_ok=True)
-                    save_file = os.path.join(self.save_path, os.path.basename(img_path))
+                    save_file = os.path.join(self.save_path, f"seg_{os.path.basename(img_path)}")
                     Image.fromarray(binary_output).save(save_file)
 
 

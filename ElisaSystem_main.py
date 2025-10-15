@@ -15,7 +15,7 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtCore import QFile, Signal
 from PySide6.QtCore import Qt
 
-from classThread import ClassificationThread
+from classThread import ClassificationThread, BatchClassificationThread
 from inferThread import InferenceThread, BatchInferenceThread
 from overlay_mask_on_image import overlay_mask_on_image, numpy_to_qpixmap
 from postProcess import postprocess_mask
@@ -73,12 +73,17 @@ class MainWindow(QMainWindow):
         self.class_use_gpu = False# 分类是否使用GPU推理
         self.class_confidence = 0.5# 分类置信度
         self.classes_json = "classes.json"
+        # 批量阳性检测状态
+        self.BOOL_savePrediction = False #是否保存阳性检测结果按钮
+        self.BOOL_saveInformation = False #是否导出详细信息
+        self.processing_queue = []# 处理队列
+        self.is_processing = False# 是否正在处理
 
 
         #-----------------------------------初始化UI------------------------------------------------------
     def load_ui(self):
         # 打开 UI 文件
-        ui_file = QFile(r"form.ui")
+        ui_file = QFile(r"D:\QTproject\elisa\form.ui")
         ui_file.open(QFile.ReadOnly)
         # 加载 UI
         loader = QUiLoader()
@@ -117,8 +122,13 @@ class MainWindow(QMainWindow):
 
         self.checkBox_saveSeg = self.ui.findChild(QCheckBox, "checkBoxSaveSeg")#是否保存分割结果按钮
         self.checkBox_saveSeg.setEnabled(False) # 初始状态为不可用
+        self.checkBox_savePredict = self.ui.findChild(QCheckBox, "checkBoxSavePredict")#是否保存阳性检测结果按钮
+        self.checkBox_savePredict.setEnabled(False) # 初始状态为不可用
+        self.checkBox_saveInformation = self.ui.findChild(QCheckBox, "checkBoxGenCSV")#是否导出详细信息按钮
+        self.checkBox_saveInformation.setEnabled(False) # 初始状态为不可用
 
         self.btn_startBatch = self.ui.findChild(QPushButton, "pushButtonStartBatch")#开始批量推理按钮
+        self.btn_startBactchPredict = self.ui.findChild(QPushButton, "pushButtonStartBatchPredict")#开始批量检测按钮
 
         self.spinBox_circularity = self.ui.findChild(QDoubleSpinBox, "doubleSpinBoxCircularity")#圆形度阈值
         self.spinBox_circularity.setValue(0.5)  # 设置初始显示值
@@ -175,8 +185,12 @@ class MainWindow(QMainWindow):
         self.btn_Savepath.clicked.connect(self.select_save_path)
         # 勾选框更新状态
         self.checkBox_saveSeg.toggled.connect(self.update_checkbox_saveSeg_status)
+        self.checkBox_savePredict.toggled.connect(self.update_checkbox_savePredict_status)
+        self.checkBox_saveInformation.toggled.connect(self.update_checkbox_saveInformation_status)
         # 开始批量推理按钮
         self.btn_startBatch.clicked.connect(self.start_batch_inference)
+        # 开始批量分类按钮
+        self.btn_startBactchPredict.clicked.connect(self.start_batch_predict)
         # 单张图片后处理
         self.btn_singlePostProcess.clicked.connect(self.start_single_post_process)
         self.checkBox_PostProcess.toggled.connect(self.update_checkbox_post_process_status)
@@ -252,6 +266,9 @@ class MainWindow(QMainWindow):
             return
         self.add_log(f"已选择保存路径：{self.save_path}")
         self.checkBox_saveSeg.setEnabled(True)
+        self.checkBox_savePredict.setEnabled(True)
+        self.checkBox_saveInformation.setEnabled(True)
+
 
     # 检测gpu是否启用
     def use_gpu_changed(self,checked:bool):
@@ -464,7 +481,7 @@ class MainWindow(QMainWindow):
         self.progressBar_batch.setMaximum(total_patch)
         self.progressBar_batch.setValue(patch_count)
 
-    # 推理线程
+    # 单图分割线程
     def start_single_inference(self):
         if self.current_image_path is None:
             QMessageBox.warning(self, "警告", "请上传选择图片")
@@ -503,12 +520,33 @@ class MainWindow(QMainWindow):
         # 保存批量分割结果勾选框
         if checked:
             self.BOOL_saveSeg = True
-            self.add_log("保存分割结果")
+            self.add_log("√保存分割结果")
         else:
             self.BOOL_saveSeg = False
-            self.add_log("不保存分割结果")
-        # 单张图片后处理勾选框
+            self.add_log("×不保存分割结果")
 
+
+    def update_checkbox_savePredict_status(self, checked):
+        # 记录勾选状态
+        # 保存批量阳性分类结果
+        if checked:
+            self.BOOL_savePrediction = True
+            self.add_log("√保存分割结果")
+        else:
+            self.BOOL_savePrediction = False
+            self.add_log("×不保存分割结果")
+
+    def update_checkbox_saveInformation_status(self, checked):
+        # 记录勾选状态
+        # 保存批量检测详细信息
+        if checked:
+            self.BOOL_saveInformation = True
+            self.add_log("√保存检测记录")
+        else:
+            self.BOOL_saveInformation = False
+            self.add_log("×不保存分割结果")
+
+        # 单张图片后处理勾选框
     def update_checkbox_post_process_status(self, checked:bool):
         if checked and self.current_prediction is None:
             QMessageBox.information(self, "提示", "已经开启后处理")
@@ -548,10 +586,7 @@ class MainWindow(QMainWindow):
             # 如果你需要叠加显示区域（彩色连通域），可以在这里调用
             self.on_inference_finished(self.current_mask)
 
-
-
-
-    # batch图片推理线程
+    # batch分割线程
     def start_batch_inference(self):
         if self.image_folder_path is None:
             QMessageBox.warning(self, "警告", "请选择图片文件夹")
@@ -566,8 +601,6 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "警告", "请选择模型权重文件")
             return
         self.applyPostProcess = self.checkBox_PostProcess.isChecked()
-        # 开始推理，禁用按钮
-        self.disable_buttons()
         # 每次批次推理，清空输入区索引
         self.current_image_index = 0
         self.batch_infer_thread = BatchInferenceThread(
@@ -586,10 +619,11 @@ class MainWindow(QMainWindow):
 
         )
         # 绑定信号
+        self.batch_infer_thread.start_inference.connect(self.disable_buttons)        # 开始推理，禁用按钮
         self.batch_infer_thread.single_progress.connect(self.update_progress_bar)#单个进度条更新
         self.batch_infer_thread.batch_progress.connect(self.update_progress_bar_batch)# 整个batch进度
         self.batch_infer_thread.finished_single.connect(self.handle_single_result)# 单个推理结果处理，包含上传区的下张图片显示
-        self.batch_infer_thread.finished_batch.connect(lambda: self.textBrowser.append("批量推理完成"))# 整个batch推理完成
+        self.batch_infer_thread.finished_batch.connect(lambda: self.add_log("批量推理完成"))# 整个batch推理完成
         self.batch_infer_thread.finished_batch.connect(self.enable_buttons)# 启用按钮
         self.batch_infer_thread.cuda_available.connect(self.handle_device_status)# cuda环境检查
 
@@ -597,14 +631,147 @@ class MainWindow(QMainWindow):
         self.batch_infer_thread.start()
         self.add_log("批量推理已开始...")
 
+    # batch图片分类线程
+    def start_batch_predict(self):
+        if self.image_folder_path is None:
+            QMessageBox.warning(self, "警告", "请选择图片文件夹")
+            return
+        if len(self.image_list) == 0:
+            QMessageBox.warning(self, "警告", "文件夹内没有图片")
+            return
+        if self.current_model is None:
+            QMessageBox.warning(self, "警告", "请选择模型")
+            return
+        if self.current_model_path is None:
+            QMessageBox.warning(self, "警告", "请选择模型权重文件")
+            return
+        self.applyPostProcess = self.checkBox_PostProcess.isChecked()
+        # 每次批次推理，清空输入区索引
+        self.current_image_index = 0
+        self.batch_infer_thread = BatchInferenceThread(
+            self.current_model,
+            self.current_model_path,
+            self.image_list,
+            self.stride,
+            self.confidence,
+            self.use_gpu,
+            self.save_path,
+            self.BOOL_saveSeg,
+            self.applyPostProcess,
+            max_objects=96,
+            min_area=self.min_area,
+            min_circularity=self.circularity
+
+        )
+        # 绑定信号
+        self.batch_infer_thread.start_inference.connect(self.disable_buttons)  # 开始推理，禁用按钮
+        self.batch_infer_thread.single_progress.connect(self.update_progress_bar)  # 单个进度条更新
+        self.batch_infer_thread.batch_progress.connect(self.update_progress_bar_batch)  # 整个batch进度
+        self.batch_infer_thread.finished_single.connect(self.handle_single_result_then_classify)  # 处理单个推理结果并送入
+        self.batch_infer_thread.finished_batch.connect(lambda: self.add_log("批量推理完成"))  # 整个batch推理完成
+        self.batch_infer_thread.finished_batch.connect(self.enable_buttons)  # 启用按钮
+        self.batch_infer_thread.cuda_available.connect(self.handle_device_status)  # cuda环境检查
+        # 启动线程
+        self.batch_infer_thread.start()
+        self.add_log("批量推理已开始...")
+
+    # 处理单个分割结果并送入分类队列
+    def handle_single_result_then_classify(self,output,image_path,infer_time):
+        """ 分割结果加入队列，按顺序处理"""
+        self.processing_queue.append((output,image_path,infer_time))
+        self.process_next_in_queue()
+
+    # 处理队列中的任务
+    def process_next_in_queue(self):
+        if self.is_processing or not self.processing_queue:
+            return
+        self.is_processing = True# 表示正在处理
+        # 队列分割结果pop
+        output,image_path,infer_time = self.processing_queue.pop(0)
+        # -----------先进行分割结果的显示
+        self.handle_single_result(output,image_path,infer_time)
+        # -----------ROI裁切
+        if self.current_mask is None:
+            QMessageBox.warning(self, "警告", "当前不存在掩码文件，请先进行分割")
+            return
+        roi_list = preprocess_for_classification(self.current_mask,self.current_array,patch_size=224)
+        # 裁切后初始化class分类字段为None
+        for item in roi_list:
+            item["class"] = None
+        # 保存成员变量，包含当前图片中裁切ROI的所有信息（分类除外））
+        self.roi_result = roi_list
+        #日志显示
+        print(len(roi_list))
+        print(roi_list[0].keys())
+        # -----------进行分类任务
+        # 配置线程参数
+        model_path = "classify_weight/best.pth"
+        model = "resnet18"  # 先写死，后续可以更改
+        # 创建线程
+        self.per_classification_thread = ClassificationThread(
+            self.roi_result,
+            model_path,
+            self.classes_json,
+            model,
+            self.class_use_gpu,
+            224,
+            self.class_confidence,
+            parent=self
+        )
+        # 绑定信号
+        self.per_classification_thread.cuda_available.connect(self.handle_device_status)  # cuda环境检查
+        self.per_classification_thread.finished.connect(self.on_per_classification_finished)
+        self.per_classification_thread.progress.connect(self.update_classification_progress)
+        # 启动线程
+        self.per_classification_thread.start()
+
+    def on_per_classification_finished(self):
+        """
+        分类完成后回调，更新显示或绘制阳性ROI
+        """
+        print("所有ROI分类完成")
+        # 拷贝原图+掩码
+        if self.current_overlaid is None:
+            QMessageBox.warning(self, "警告", "原图掩码叠加结果不存在")
+            return
+        overlaid_display = self.current_overlaid.copy()
+        # 遍历ROI字典列表，其中已经包含了分类结果
+        for idx, item in enumerate(self.roi_result):
+            print(f"ROI {idx}: 类别={item.get('class')}, 置信度={item.get('confidence', 0):.2f}")
+            x, y, w, h = item["bbox"]
+            # 阳性绘制红框
+            if item["class"] == "positive" and item.get("confidence", 0) >= self.class_confidence:
+                cv2.rectangle(overlaid_display, (x, y), (x + w, y + h), (0, 0, 255), 3)
+                cv2.putText(overlaid_display, f"{item['class']}:{item['confidence']:.2f}",
+                            (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 3)
+
+        # 显示
+        pixmap = numpy_to_qpixmap(overlaid_display)
+        self.graphicsView_in.scene().clear()
+        self.graphicsView_in.scene().addPixmap(pixmap)
+        self.graphicsView_in.fitInView(self.graphicsView_in.scene().itemsBoundingRect(), Qt.KeepAspectRatio)
+        # 保存
+        if self.save_path and self.BOOL_savePrediction:
+            save_file = os.path.join(self.save_path,f"result_{os.path.basename(self.current_image_path)}")
+            cv2.imwrite(save_file, overlaid_display)
+            self.add_log(f"阳性检测结果已保存: {save_file}")
+        # 标记处理完成，继续队列中的下一个任务
+        self.is_processing = False
+        self.process_next_in_queue()
+
+
     # 禁用按钮
     def disable_buttons(self):
+        #禁用分割参数控制
         self.checkBox_PostProcess.setEnabled(False)
         self.btn_Savepath.setEnabled(False)
         self.btn_openMutilImageFolder.setEnabled(False)
         self.spinBox_stride.setEnabled(False)
         self.spinBox_confidence.setEnabled(False)
+        #禁用批量输出控制
         self.checkBox_saveSeg.setEnabled(False)
+        self.checkBox_savePredict.setEnabled(False)
+        self.checkBox_saveInformation.setEnabled(False)
         self.spinBox_minArea.setEnabled(False)
         self.spinBox_circularity.setEnabled(False)
         self.radioButton_useGPU.setEnabled(False)
@@ -621,6 +788,8 @@ class MainWindow(QMainWindow):
         self.spinBox_stride.setEnabled(True)
         self.spinBox_confidence.setEnabled(True)
         self.checkBox_saveSeg.setEnabled(True)
+        self.checkBox_savePredict.setEnabled(True)
+        self.checkBox_saveInformation.setEnabled(True)
         self.spinBox_minArea.setEnabled(True)
         self.spinBox_circularity.setEnabled(True)
         self.radioButton_useGPU.setEnabled(True)
@@ -644,7 +813,7 @@ class MainWindow(QMainWindow):
         # 2D 灰度图保持灰度；3D 视为 BGR 或 RGB 均可由 numpy_to_qpixmap 处理
         return numpy_to_qpixmap(array)
 
-    # 处理推理结果
+    # 处理单张分割结果
     def handle_inference_result(self,output,infer_time):
         # output 可以是 mask、概率图等
         self.add_log(f"推理完成,用时{infer_time:.2f}秒")
@@ -668,7 +837,7 @@ class MainWindow(QMainWindow):
         # 显示叠加掩码
         self.on_inference_finished(self.current_mask)
 
-    # 多个图片单张推理结果处理
+    # 多个图片单张分割结果处理
     def handle_single_result(self,output,image_path,infer_time):
         # 保存当前推理结果
         self.current_prediction = output
@@ -729,7 +898,7 @@ class MainWindow(QMainWindow):
         # self.current_prediction = mask
         self.current_overlaid = overlaid
 
-    # 裁切ROI区域
+    # 单张图片裁切ROI区域
     def crop_ROI_base_on_mask(self):
         #判断当前掩码是否为空
         if self.current_mask is None:
@@ -746,7 +915,7 @@ class MainWindow(QMainWindow):
         print(len(roi_list))
         print(roi_list[0].keys())
 
-    # 阳性检测
+    # 单张图片阳性检测
     def start_positive_predict(self):
         """
             对已裁切的ROI进行阳性/阴性分类，并更新roi_result
@@ -811,6 +980,8 @@ class MainWindow(QMainWindow):
             分类进度更新
         """
         self.progressBar_class.setValue(int(index / total * 100))
+
+
 
 
 
