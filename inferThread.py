@@ -13,7 +13,7 @@ from torchvision import transforms
 
 from model.UNet import Unet
 from model.attention_unet import AttU_Net
-from model.fcn import get_fcn32s
+from model.fcn import get_fcn32s, get_fcn8s
 from model.r2unet import R2U_Net
 from model.swinUnet import SwinUNet
 from postProcess import postprocess_mask
@@ -220,8 +220,9 @@ class InferenceThread(QThread):
         elif self.model == 'SwinUnet':
             self.model = SwinUNet(256,256,3,32,1)
             self.model = load_model(self.model, self.model_path)
-        elif self.model == 'FCN32s':
-            self.model = get_fcn32s()
+        elif self.model == 'FCN8s':
+            self.model = get_fcn8s()
+            self.model = load_model(self.model, self.model_path)
 
         # 检测设备
         if self.USING_GPU and torch.cuda.is_available():
@@ -282,8 +283,9 @@ class BatchInferenceThread(QThread):
         elif self.model == 'SwinUnet':
             self.model = SwinUNet(256, 256, 3, 32, 1)
             self.model = load_model(self.model, self.model_path)
-        elif self.model == 'FCN32s':
-            self.model = get_fcn32s()
+        elif self.model == 'FCN8s':
+            self.model = get_fcn8s()
+            self.model = load_model(self.model, self.model_path)
 
         # 检测设备
         if self.USING_GPU and torch.cuda.is_available():

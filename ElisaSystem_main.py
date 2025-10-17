@@ -1,4 +1,6 @@
 import os
+# os.environ["LOKY_MAX_CPU_COUNT"] = "10"  # 根据你的CPU物理核心数
+# os.environ["OMP_NUM_THREADS"] = "1"
 import sys
 from datetime import datetime
 
@@ -16,10 +18,12 @@ from PySide6.QtCore import QFile, Signal
 from PySide6.QtCore import Qt
 
 from classThread import ClassificationThread, BatchClassificationThread
+from export_information import export_detailed_csv, export_plate_format_csv
 from inferThread import InferenceThread, BatchInferenceThread
 from overlay_mask_on_image import overlay_mask_on_image, numpy_to_qpixmap
 from postProcess import postprocess_mask
 from prepareClassification import preprocess_for_classification
+# from export_information import export_detailed_csv, export_plate_format_csv, sort_roi_with_tolerance
 
 
 class MainWindow(QMainWindow):
@@ -74,8 +78,9 @@ class MainWindow(QMainWindow):
         self.class_confidence = 0.5# 分类置信度
         self.classes_json = "classes.json"
         # 批量阳性检测状态
-        self.BOOL_savePrediction = False #是否保存阳性检测结果按钮
-        self.BOOL_saveInformation = False #是否导出详细信息
+        self.BOOL_savePrediction = False #是否保存阳性检测结果按钮（图片
+        self.BOOL_saveInformation = False #是否导出详细信息（连通区域信息
+        self.BOOL_savePlateFormat = False #导出板式格式（8*12表格
         self.processing_queue = []# 处理队列
         self.is_processing = False# 是否正在处理
 
@@ -83,7 +88,7 @@ class MainWindow(QMainWindow):
         #-----------------------------------初始化UI------------------------------------------------------
     def load_ui(self):
         # 打开 UI 文件
-        ui_file = QFile(r"D:\QTproject\elisa\form.ui")
+        ui_file = QFile(r"form.ui")
         ui_file.open(QFile.ReadOnly)
         # 加载 UI
         loader = QUiLoader()
@@ -126,6 +131,8 @@ class MainWindow(QMainWindow):
         self.checkBox_savePredict.setEnabled(False) # 初始状态为不可用
         self.checkBox_saveInformation = self.ui.findChild(QCheckBox, "checkBoxGenCSV")#是否导出详细信息按钮
         self.checkBox_saveInformation.setEnabled(False) # 初始状态为不可用
+        self.checkBox_savePlateFormat = self.ui.findChild(QCheckBox, "checkBoxGenExcel")
+        self.checkBox_savePlateFormat.setEnabled(False)
 
         self.btn_startBatch = self.ui.findChild(QPushButton, "pushButtonStartBatch")#开始批量推理按钮
         self.btn_startBactchPredict = self.ui.findChild(QPushButton, "pushButtonStartBatchPredict")#开始批量检测按钮
@@ -187,6 +194,7 @@ class MainWindow(QMainWindow):
         self.checkBox_saveSeg.toggled.connect(self.update_checkbox_saveSeg_status)
         self.checkBox_savePredict.toggled.connect(self.update_checkbox_savePredict_status)
         self.checkBox_saveInformation.toggled.connect(self.update_checkbox_saveInformation_status)
+        self.checkBox_savePlateFormat.toggled.connect(self.update_checkbox_savePlateFormat_status)
         # 开始批量推理按钮
         self.btn_startBatch.clicked.connect(self.start_batch_inference)
         # 开始批量分类按钮
@@ -268,6 +276,7 @@ class MainWindow(QMainWindow):
         self.checkBox_saveSeg.setEnabled(True)
         self.checkBox_savePredict.setEnabled(True)
         self.checkBox_saveInformation.setEnabled(True)
+        self.checkBox_savePlateFormat.setEnabled(True)
 
 
     # 检测gpu是否启用
@@ -446,7 +455,7 @@ class MainWindow(QMainWindow):
     # 选择FCN8S模型
     def select_fcn8s(self):
         # 设置当前模型路径/类型
-        self.current_model = "FCN8S"  # 或者 ModelType.FCN8S.name
+        self.current_model = "FCN8s"  # 或者 ModelType.FCN8S.name
         # 发出信号，更新标签
         self.model_changed.emit("FCN8S",'')
         # 日志记录
@@ -541,12 +550,25 @@ class MainWindow(QMainWindow):
         # 保存批量检测详细信息
         if checked:
             self.BOOL_saveInformation = True
-            self.add_log("√保存检测记录")
+            self.add_log("√保存联通分析记录")
         else:
             self.BOOL_saveInformation = False
-            self.add_log("×不保存分割结果")
+            self.add_log("×不保存联通分析记录")
 
         # 单张图片后处理勾选框
+
+    def update_checkbox_savePlateFormat_status(self, checked):
+        # 记录勾选状态
+        # 保存批量检测详细信息
+        if checked:
+            self.BOOL_savePlateFormat = True
+            self.add_log("√自动打开后处理开关，将保存板式检测结果")
+            self.checkBox_PostProcess.setChecked(True)
+        else:
+            self.BOOL_savePlateFormat = False
+            self.add_log("×不保存板式检测结果")
+
+    # 后处理勾选框更新
     def update_checkbox_post_process_status(self, checked:bool):
         if checked and self.current_prediction is None:
             QMessageBox.information(self, "提示", "已经开启后处理")
@@ -563,6 +585,10 @@ class MainWindow(QMainWindow):
             self.current_mask = processed_mask
             self.add_log(f"开启后处理，共找到 {num_objects} 个有效孔")
         else:
+            # 如果此时保存板式结果已经勾选，则取消勾选
+            if self.BOOL_savePlateFormat:
+                self.checkBox_savePlateFormat.setChecked(False)
+                self.update_checkbox_savePlateFormat_status(False)
             # 恢复原始预测
             self.current_mask = self.current_prediction
             self.add_log("已取消后处理，显示原始预测结果")
@@ -755,6 +781,13 @@ class MainWindow(QMainWindow):
             save_file = os.path.join(self.save_path,f"result_{os.path.basename(self.current_image_path)}")
             cv2.imwrite(save_file, overlaid_display)
             self.add_log(f"阳性检测结果已保存: {save_file}")
+        
+        # 导出详细信息和板式结果
+        if self.save_path and self.BOOL_saveInformation:
+            self.export_detailed_results()
+        if self.save_path and self.BOOL_savePlateFormat:
+            self.export_plate_results()
+        
         # 标记处理完成，继续队列中的下一个任务
         self.is_processing = False
         self.process_next_in_queue()
@@ -772,6 +805,7 @@ class MainWindow(QMainWindow):
         self.checkBox_saveSeg.setEnabled(False)
         self.checkBox_savePredict.setEnabled(False)
         self.checkBox_saveInformation.setEnabled(False)
+        self.checkBox_savePlateFormat.setEnabled(False)
         self.spinBox_minArea.setEnabled(False)
         self.spinBox_circularity.setEnabled(False)
         self.radioButton_useGPU.setEnabled(False)
@@ -790,6 +824,7 @@ class MainWindow(QMainWindow):
         self.checkBox_saveSeg.setEnabled(True)
         self.checkBox_savePredict.setEnabled(True)
         self.checkBox_saveInformation.setEnabled(True)
+        self.checkBox_savePlateFormat.setEnabled(True)
         self.spinBox_minArea.setEnabled(True)
         self.spinBox_circularity.setEnabled(True)
         self.radioButton_useGPU.setEnabled(True)
@@ -981,10 +1016,27 @@ class MainWindow(QMainWindow):
         """
         self.progressBar_class.setValue(int(index / total * 100))
 
+    def export_detailed_results(self):
+        """
+        导出详细CSV结果
+        """
+        if self.save_path and self.BOOL_saveInformation and self.roi_result:
+            export_detailed_csv(self.roi_result, self.save_path, self.current_image_path)
+            self.add_log("详细分析结果已导出")
 
-
-
-
+    def export_plate_results(self):
+        """
+        导出96孔板格式结果
+        """
+        if self.save_path and self.BOOL_savePlateFormat and self.roi_result:
+            export_plate_format_csv(
+                self.roi_result, 
+                self.save_path, 
+                self.current_image_path, 
+                # self.current_mask,
+                # self.current_array
+            )
+            self.add_log("板式分析结果已导出")
 
 
 
