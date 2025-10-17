@@ -29,14 +29,14 @@ ELISA图像处理系统是一个基于深度学习的图像分割工具，专门
 示例图片 [example.jpg](example.jpg) 展示了完整的96孔板检测结果。
 
 对应的导出信息包括：
-- [plateFormatInformation](plateFormatInformation.csv)：标准化96孔板格式结果，以8行12列的表格形式展示，"+"表示阳性孔，"-"表示阴性孔，"?"表示未检测到的孔位
-- [blobInformation](blobInformation.csv)：详细的联通区域分析信息，包含每个连通区域的质心坐标、边界框信息、分类结果和置信度等
+- [plateFormatInformation.csv](plateFormatInformation.csv)：标准化96孔板格式结果，以8行12列的表格形式展示，"+"表示阳性孔，"-"表示阴性孔，"?"表示未检测到的孔位
+- [blobInformation.csv](blobInformation.csv)：详细的联通区域分析信息，包含每个连通区域的质心坐标、边界框信息、分类结果和置信度等
 
 ### 缺失孔位检测结果
 示例图片 [exampleWithMissingWells.jpg](exampleWithMissingWells.jpg) 展示了部分孔位缺失情况下的检测结果。
 
 对应的导出信息：
-- [plateFormatInformationWithMissingWells](plateFormatInformationWithMissingWells.csv)：处理缺失孔位后的标准化96孔板格式结果，能够智能识别并标记缺失的孔位
+- [plateFormatInformationWithMissingWells.csv](plateFormatInformationWithMissingWells.csv)：处理缺失孔位后的标准化96孔板格式结果，能够智能识别并标记缺失的孔位
 
 ## 系统要求
 
@@ -122,8 +122,12 @@ elisaSystem/
 ├── classThread.py          # 阳性孔分类线程
 ├── predict.py              # 分类模型推理脚本
 ├── multi_classification_framework.py  # 分类模型训练框架
+├── export_information.py   # 检测结果导出功能
 ├── classes.json            # 分类类别定义文件
-└── overlay_mask_on_image.py# 结果可视化
+├── overlay_mask_on_image.py# 结果可视化
+├── form.ui                 # UI界面文件
+├── requirements.txt        # 项目依赖
+└── README.md              # 项目说明文档
 ```
 
 ## 技术细节
